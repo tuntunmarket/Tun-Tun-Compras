@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Modelo de Compras · Tun Tun Market</title>
+<style>
+  :root {
+    --red:      #E24B4A;
+    --red-dark: #C93F3E;
+    --red-bg:   #FCEBEB;
+    --red-txt:  #A32D2D;
+    --amber-bg: #FAEEDA;
+    --amber-txt:#854F0B;
+    --green-bg: #EAF3DE;
+    --green-txt:#3B6D11;
+    --gray-bg:  #F1EFE8;
+    --gray-txt: #5F5E5A;
+    --border:   rgba(0,0,0,0.12);
+    --border-md:rgba(0,0,0,0.22);
+    --text:     #1a1a18;
+    --text-sec: #5F5E5A;
+    --surface:  #F8F7F4;
+    --white:    #ffffff;
+    --radius:   8px;
+    --radius-lg:12px;
+    --mono:     'Courier New', monospace;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, -apple-system, sans-serif; background: var(--surface); color: var(--text); font-size: 14px; }
+
+  .app { max-width: 1300px; margin: 0 auto; padding: 1.5rem 1.25rem 3rem; }
+
+  /* Header */
+  .hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: .75rem; }
+  .hdr-left { display: flex; align-items: center; gap: 12px; }
+  .logo { width: 40px; height: 40px; background: var(--red); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+  .brand { font-size: 20px; font-weight: 600; }
+  .brand-sub { font-size: 12px; color: var(--text-sec); margin-top: 2px; }
+  .hdr-right { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* Buttons */
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border: 1px solid var(--border-md); border-radius: var(--radius); background: var(--white); cursor: pointer; font-size: 13px; font-weight: 500; color: var(--text); transition: background .15s, opacity .15s; }
+  .btn:hover { background: var(--surface); }
+  .btn:active { opacity: .8; }
+  .btn-red { background: var(--red); border-color: var(--red); color: #fff; }
+  .btn-red:hover { background: var(--red-dark); }
+  .btn-sm { padding: 6px 12px; font-size: 12px; }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+
+  /* Config banner */
+  .config-banner { background: #E6F1FB; border: 1px solid #B5D4F4; border-radius: var(--radius-lg); padding: 1rem 1.25rem; margin-bottom: 1.25rem; }
+  .config-banner h3 { font-size: 14px; font-weight: 600; color: #185FA5; margin-bottom: .5rem; }
+  .config-banner p { font-size: 13px; color: #0C447C; line-height: 1.6; }
+  .url-input-row { display: flex; gap: 8px; margin-top: .75rem; }
+  .url-input { flex: 1; height: 36px; border: 1px solid #B5D4F4; border-radius: var(--radius); padding: 0 10px; font-size: 13px; color: var(--text); background: var(--white); }
+  .url-input:focus { outline: none; border-color: var(--red); }
+
+  /* Notice */
+  .notice { font-size: 12px; color: var(--text-sec); background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 6px 12px; margin-bottom: 1rem; display: flex; align-items: center; gap: 6px; }
+
+  /* Metrics */
+  .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 1.25rem; }
+  .metric { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 1rem 1.125rem; }
+  .metric-label { font-size: 11px; color: var(--text-sec); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .04em; }
+  .metric-val { font-size: 26px; font-weight: 600; }
+  .metric-sub { font-size: 11px; color: var(--text-sec); margin-top: 3px; }
+
+  /* Controls */
+  .controls { display: flex; align-items: center; gap: 8px; margin-bottom: .875rem; flex-wrap: wrap; }
+  .search-wrap { position: relative; flex: 1; min-width: 200px; }
+  .search-wrap svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-sec); pointer-events: none; }
+  .search-wrap input { padding-left: 34px; }
+  input[type=text], select { height: 36px; border: 1px solid var(--border-md); border-radius: var(--radius); background: var(--white); color: var(--text); font-size: 13px; padding: 0 10px; }
+  input[type=text]:focus, select:focus { outline: none; border-color: var(--red); }
+  .filter-group { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-sec); white-space: nowrap; }
+
+  /* Table */
+  .tbl-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--white); }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th { background: var(--surface); font-weight: 500; font-size: 11px; color: var(--text-sec); text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; position: sticky; top: 0; z-index: 1; cursor: pointer; user-select: none; text-transform: uppercase; letter-spacing: .04em; }
+  thead th:hover { color: var(--text); }
+  thead th.sort-asc::after { content: " ↑"; }
+  thead th.sort-desc::after { content: " ↓"; }
+  tbody tr { border-bottom: 1px solid var(--border); }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface); }
+  td { padding: 9px 12px; vertical-align: middle; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  .ref { font-family: var(--mono); font-size: 11px; color: var(--text-sec); }
+  .product-name { font-size: 13px; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .variant-txt { font-size: 11px; color: var(--text-sec); margin-top: 1px; }
+  .prov-txt { font-size: 11px; color: var(--text-sec); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  /* Pills */
+  .pill { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .pill-red    { background: var(--red-bg);   color: var(--red-txt); }
+  .pill-amber  { background: var(--amber-bg); color: var(--amber-txt); }
+  .pill-green  { background: var(--green-bg); color: var(--green-txt); }
+  .pill-gray   { background: var(--gray-bg);  color: var(--gray-txt); }
+
+  /* Trend */
+  .trend-up   { color: var(--green-txt); font-size: 12px; font-weight: 500; }
+  .trend-dn   { color: var(--red-txt);   font-size: 12px; font-weight: 500; }
+  .trend-flat { color: var(--text-sec);  font-size: 12px; }
+
+  /* Quantity input */
+  .qty-input { width: 72px; height: 30px; text-align: right; border: 1px solid var(--border-md); border-radius: var(--radius); font-size: 13px; padding: 0 6px; color: var(--text); background: var(--white); }
+  .qty-input:focus { outline: none; border-color: var(--red); }
+  .qty-input.has-qty { background: #FFFBF3; border-color: #EF9F27; }
+
+  /* Cob warning */
+  .cob-warn { color: var(--red-txt); font-weight: 600; }
+
+  /* Footer */
+  .footer { display: flex; align-items: center; justify-content: space-between; margin-top: 1rem; flex-wrap: wrap; gap: .5rem; }
+  .footer-info { font-size: 12px; color: var(--text-sec); }
+  .footer-btns { display: flex; gap: 8px; }
+
+  /* Loading/Error */
+  .state-box { text-align: center; padding: 3rem 1rem; color: var(--text-sec); }
+  .state-box .icon { font-size: 2.5rem; margin-bottom: .75rem; }
+  .state-box h3 { font-size: 16px; font-weight: 500; color: var(--text); margin-bottom: .5rem; }
+  .state-box p { font-size: 13px; line-height: 1.6; max-width: 420px; margin: 0 auto; }
+  .spinner { display: inline-block; width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--red); border-radius: 50%; animation: spin .7s linear infinite; margin-bottom: 1rem; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Modal */
+  .modal-bg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 200; align-items: center; justify-content: center; }
+  .modal-bg.open { display: flex; }
+  .modal { background: var(--white); border-radius: var(--radius-lg); border: 1px solid var(--border); padding: 1.75rem; width: 480px; max-width: 92vw; max-height: 85vh; overflow-y: auto; }
+  .modal h3 { font-size: 16px; font-weight: 600; margin-bottom: 1rem; }
+  .modal-section { margin-bottom: 1rem; }
+  .modal-section h4 { font-size: 13px; font-weight: 600; margin-bottom: .35rem; }
+  .modal-section p, .modal-section li { font-size: 13px; color: var(--text-sec); line-height: 1.65; }
+  .modal-section ul { padding-left: 1.25rem; }
+  .modal-foot { display: flex; justify-content: flex-end; margin-top: 1.25rem; }
+
+  /* Responsive */
+  @media (max-width: 700px) {
+    .metrics { grid-template-columns: repeat(2, 1fr); }
+    .hdr { flex-direction: column; align-items: flex-start; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Header -->
+  <div class="hdr">
+    <div class="hdr-left">
+      <div class="logo">🛒</div>
+      <div>
+        <div class="brand">Modelo de Compras · Tun Tun Market</div>
+        <div class="brand-sub" id="last-update">Configura la URL del script para comenzar</div>
+      </div>
+    </div>
+    <div class="hdr-right">
+      <button class="btn btn-sm" id="btn-info">ℹ Metodología</button>
+      <button class="btn btn-sm btn-red" id="btn-reload" disabled>↻ Actualizar Sheet</button>
+    </div>
+  </div>
+
+  <!-- Config banner (visible hasta que el usuario pegue la URL) -->
+  <div class="config-banner" id="config-banner">
+    <h3>📋 Paso único de configuración</h3>
+    <p>Pega aquí la URL de tu Google Apps Script Web App. Una vez guardada, la herramienta leerá el sheet directamente en tiempo real cada vez que presiones "Actualizar Sheet".</p>
+    <div class="url-input-row">
+      <input class="url-input" id="script-url" type="text" placeholder="https://script.google.com/macros/s/XXXXX/exec" />
+      <button class="btn btn-red btn-sm" id="btn-save-url">Guardar URL</button>
+    </div>
+  </div>
+
+  <!-- Notice -->
+  <div class="notice">
+    🔍 Solo se muestran productos con <strong>&nbsp;is_published = TRUE&nbsp;</strong> y <strong>&nbsp;supplier_available = TRUE</strong>
+  </div>
+
+  <!-- Metrics -->
+  <div class="metrics">
+    <div class="metric"><div class="metric-label">Productos elegibles</div><div class="metric-val" id="m-prods">—</div><div class="metric-sub">publicados y disponibles</div></div>
+    <div class="metric"><div class="metric-label">Requieren orden</div><div class="metric-val" id="m-comprar">—</div><div class="metric-sub">esta semana</div></div>
+    <div class="metric"><div class="metric-label">Unidades a pedir</div><div class="metric-val" id="m-units">—</div><div class="metric-sub">ajustado a cajas</div></div>
+    <div class="metric"><div class="metric-label">En cobertura ok</div><div class="metric-val" id="m-ok">—</div><div class="metric-sub">≥ 2 semanas</div></div>
+  </div>
+
+  <!-- Controls -->
+  <div class="controls">
+    <div class="search-wrap">
+      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" id="search" placeholder="Buscar producto, referencia, proveedor...">
+    </div>
+    <div class="filter-group">
+      <label for="fil-prov">Proveedor</label>
+      <select id="fil-prov" style="max-width:180px"><option value="">Todos</option></select>
+    </div>
+    <div class="filter-group">
+      <label for="fil-status">Estado</label>
+      <select id="fil-status">
+        <option value="">Todos</option>
+        <option value="urgente">Urgente</option>
+        <option value="pedir">Pedir</option>
+        <option value="ok">Ok</option>
+        <option value="sin-venta">Sin venta</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label for="fil-sort">Ordenar por</label>
+      <select id="fil-sort">
+        <option value="compra-desc">Mayor compra</option>
+        <option value="cobertura-asc">Menor cobertura</option>
+        <option value="compra-asc">Menor compra</option>
+        <option value="producto">Producto A-Z</option>
+        <option value="proveedor">Proveedor A-Z</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="tbl-wrap">
+    <div id="state-area" class="state-box">
+      <div class="icon">📊</div>
+      <h3>Listo para cargar</h3>
+      <p>Configura la URL del Apps Script arriba y haz clic en "Guardar URL" para cargar los datos del sheet.</p>
+    </div>
+    <table id="main-table" style="display:none">
+      <thead>
+        <tr>
+          <th style="width:105px" data-sort="ref">Referencia</th>
+          <th style="width:115px" data-sort="proveedor">Proveedor</th>
+          <th data-sort="producto">Producto</th>
+          <th style="width:70px" class="num" data-sort="pronosticado">Pronos.</th>
+          <th style="width:65px" class="num" data-sort="vta" title="Promedio ponderado semanal">Vta/sem</th>
+          <th style="width:60px" data-sort="trend" title="Tendencia 4 últimas sem vs anteriores">Tend.</th>
+          <th style="width:70px" class="num" data-sort="cobertura" title="Semanas de stock = pronosticado / vta_sem">Cobrt.</th>
+          <th style="width:50px" class="num" title="Unidad de compra al proveedor (purchase_units_per_box)">Caja</th>
+          <th style="width:85px" class="num" data-sort="pedido" title="Unidades a pedir redondeadas al múltiplo de caja">A pedir</th>
+          <th style="width:78px">Estado</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <div class="footer-info" id="footer-count"></div>
+    <div class="footer-btns">
+      <button class="btn btn-sm" id="btn-csv">⬇ Exportar CSV Odoo</button>
+    </div>
+  </div>
+
+</div><!-- /app -->
+
+<!-- Modal metodología -->
+<div class="modal-bg" id="modal">
+  <div class="modal">
+    <h3>Metodología de cálculo</h3>
+    <div class="modal-section">
+      <h4>Filtro de elegibilidad</h4>
+      <p>Solo se procesan filas donde <code>is_published = TRUE</code> y <code>supplier_available = TRUE</code>. El resto queda excluido de la proyección de compras.</p>
+    </div>
+    <div class="modal-section">
+      <h4>Venta proyectada por semana</h4>
+      <p>Promedio ponderado excluyendo semanas en cero:</p>
+      <ul>
+        <li>65% del peso → últimas 4 semanas (units_last_week, w2, w3, w4)</li>
+        <li>35% del peso → semanas 5 a 9 (historial más antiguo)</li>
+      </ul>
+      <p>Esto pondera la tendencia reciente sin ignorar el comportamiento histórico.</p>
+    </div>
+    <div class="modal-section">
+      <h4>Cobertura actual</h4>
+      <p>pronosticado ÷ venta_proyectada = semanas de stock disponible.<br>Si venta = 0 pero hay stock, la cobertura es infinita (estado Ok).</p>
+    </div>
+    <div class="modal-section">
+      <h4>Cantidad base a pedir</h4>
+      <p>MAX(0, venta_proyectada × 2 semanas − pronosticado)<br>Política de inventario: 2 semanas de cobertura objetivo.</p>
+    </div>
+    <div class="modal-section">
+      <h4>Ajuste a múltiplo de caja</h4>
+      <p>La cantidad base se redondea hacia arriba al múltiplo de <code>purchase_units_per_box</code> con CEILING.<br>
+      Ejemplo: necesito 14 unidades, la caja trae 12 → se piden 24.</p>
+    </div>
+    <div class="modal-section">
+      <h4>Estados</h4>
+      <ul>
+        <li><strong>Urgente</strong> → cobertura &lt; 1 semana</li>
+        <li><strong>Pedir</strong> → cobertura entre 1 y 2 semanas</li>
+        <li><strong>Ok</strong> → cobertura ≥ 2 semanas</li>
+        <li><strong>Sin venta</strong> → sin historial ni inventario activo</li>
+      </ul>
+    </div>
+    <div class="modal-section">
+      <h4>Exportación Odoo</h4>
+      <p>El CSV incluye columnas: <code>internal_reference, product, variant, supplier, qty, purchase_units_per_box</code>. Solo filas con qty &gt; 0.</p>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-sm" id="modal-close">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── Persistencia de URL ───────────────────────────────────────────────────
+const LS_KEY = 'tuntun_script_url';
+
+function savedUrl() {
+  try { return localStorage.getItem(LS_KEY) || ''; } catch(e) { return ''; }
+}
+function saveUrl(url) {
+  try { localStorage.setItem(LS_KEY, url); } catch(e) {}
+}
+
+// Al cargar la página, restaura la URL guardada
+window.addEventListener('DOMContentLoaded', () => {
+  const url = savedUrl();
+  if (url) {
+    document.getElementById('script-url').value = url;
+    document.getElementById('config-banner').style.display = 'none';
+    document.getElementById('btn-reload').disabled = false;
+    loadData(url);
+  }
+});
+
+document.getElementById('btn-save-url').addEventListener('click', () => {
+  const url = document.getElementById('script-url').value.trim();
+  if (!url.startsWith('https://script.google.com/')) {
+    alert('La URL debe comenzar con https://script.google.com/');
+    return;
+  }
+  saveUrl(url);
+  document.getElementById('config-banner').style.display = 'none';
+  document.getElementById('btn-reload').disabled = false;
+  loadData(url);
+});
+
+document.getElementById('btn-reload').addEventListener('click', () => {
+  loadData(savedUrl());
+});
+
+// ─── Datos ────────────────────────────────────────────────────────────────
+let allRows = [];
+let sortCol = 'compra-desc';
+let sortDir = 1;
+
+async function loadData(url) {
+  showLoading();
+  document.getElementById('btn-reload').disabled = true;
+  document.getElementById('last-update').textContent = 'Cargando datos del Sheet...';
+
+  try {
+    // Apps Script no soporta CORS en modo fetch directo desde páginas externas;
+    // usamos mode 'no-cors' no nos daría la respuesta, así que usamos jsonp-style
+    // via fetch con la URL directa (funciona cuando el script está publicado como "Cualquier persona").
+    const res = await fetch(url, { redirect: 'follow' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const json = await res.json();
+    if (!json.ok) throw new Error(json.error || 'Error en el script');
+    processData(json.data);
+  } catch (err) {
+    showError(err.message);
+  } finally {
+    document.getElementById('btn-reload').disabled = false;
+  }
+}
+
+function processData(raw) {
+  const eligible = raw.filter(r => r.is_published === true && r.supplier_available === true);
+
+  allRows = eligible.map(r => {
+    const weeks = [
+      r.units_week_9, r.units_week_8, r.units_week_7, r.units_week_6,
+      r.units_week_5, r.units_week_4, r.units_week_3, r.units_week_2,
+      r.units_last_week
+    ].map(Number);
+
+    const box   = Math.max(1, Number(r.purchase_units_per_box) || 1);
+    const pron  = Number(r.pronosticado) || 0;
+    const vta   = weightedAvg(weeks);
+    const tr    = calcTrend(weeks);
+    const cob   = vta > 0 ? pron / vta : (pron > 0 ? 9999 : 0);
+    const base  = Math.max(0, vta * 2 - pron);
+    const ped   = base > 0 ? Math.ceil(base / box) * box : 0;
+    const allZ  = weeks.every(w => w === 0);
+    const status = (allZ && pron === 0) ? 'sin-venta'
+                 : cob < 1  ? 'urgente'
+                 : cob < 2  ? 'pedir'
+                 : 'ok';
+
+    return {
+      supplier: r.supplier || '',
+      ref:      String(r.internal_reference || ''),
+      product:  r.product  || '',
+      variant:  r.variant  || '',
+      pron, weeks, box,
+      vta:  Math.round(vta * 10) / 10,
+      tr, cob, status,
+      pedBase: ped,
+      pedEdit: ped,
+    };
+  });
+
+  // Poblar selector de proveedores
+  const sel = document.getElementById('fil-prov');
+  const provs = [...new Set(allRows.map(r => r.supplier).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">Todos</option>';
+  provs.forEach(p => { const o = document.createElement('option'); o.value = p; o.textContent = p; sel.appendChild(o); });
+
+  const now = new Date();
+  const total = raw.length;
+  document.getElementById('last-update').textContent =
+    `Actualizado ${now.toLocaleDateString('es-VE', {weekday:'short', day:'2-digit', month:'short'})} ` +
+    `${now.toLocaleTimeString('es-VE', {hour:'2-digit', minute:'2-digit'})} · ` +
+    `${eligible.length} elegibles de ${total} en sheet`;
+
+  showTable();
+  renderAll();
+}
+
+// ─── Cálculos ─────────────────────────────────────────────────────────────
+function weightedAvg(weeks) {
+  // weeks = [w9, w8, w7, w6, w5, w4, w3, w2, w1(last)]
+  const recent = weeks.slice(5); // w4, w3, w2, w1 = las 4 más recientes
+  const older  = weeks.slice(0, 5);
+  const sumR   = recent.reduce((a, b) => a + b, 0);
+  const cntR   = recent.filter(w => w > 0).length || 1;
+  const sumO   = older.reduce((a, b) => a + b, 0);
+  const cntO   = older.filter(w => w > 0).length || 1;
+  if (weeks.every(w => w === 0)) return 0;
+  return (sumR / cntR) * 0.65 + (sumO / cntO) * 0.35;
+}
+
+function calcTrend(weeks) {
+  const recent = weeks.slice(5).filter(w => w > 0);
+  const older  = weeks.slice(0, 5).filter(w => w > 0);
+  if (!recent.length || !older.length) return 0;
+  const aR = recent.reduce((a, b) => a + b, 0) / recent.length;
+  const aO = older.reduce((a, b) => a + b, 0)  / older.length;
+  return aO === 0 ? 0 : (aR - aO) / aO;
+}
+
+// ─── Render ───────────────────────────────────────────────────────────────
+function renderAll() {
+  const q    = document.getElementById('search').value.toLowerCase();
+  const prov = document.getElementById('fil-prov').value;
+  const st   = document.getElementById('fil-status').value;
+  const sort = document.getElementById('fil-sort').value;
+
+  let filtered = allRows.filter(r => {
+    if (q && !r.product.toLowerCase().includes(q) &&
+             !r.ref.toLowerCase().includes(q) &&
+             !r.supplier.toLowerCase().includes(q)) return false;
+    if (prov && r.supplier !== prov) return false;
+    if (st && r.status !== st) return false;
+    return true;
+  });
+
+  filtered.sort((a, b) => {
+    switch(sort) {
+      case 'compra-desc':    return b.pedEdit - a.pedEdit;
+      case 'compra-asc':     return a.pedEdit - b.pedEdit;
+      case 'cobertura-asc':  return a.cob - b.cob;
+      case 'producto':       return a.product.localeCompare(b.product, 'es');
+      case 'proveedor':      return a.supplier.localeCompare(b.supplier, 'es');
+      default:               return 0;
+    }
+  });
+
+  updateMetrics();
+
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = '';
+
+  filtered.forEach((r, i) => {
+    const tr = document.createElement('tr');
+
+    const trendHtml = r.tr > 0.1  ? `<span class="trend-up">↑ ${Math.round(r.tr * 100)}%</span>`
+                    : r.tr < -0.1 ? `<span class="trend-dn">↓ ${Math.round(Math.abs(r.tr) * 100)}%</span>`
+                    : `<span class="trend-flat">→</span>`;
+
+    const cobStr  = r.status === 'sin-venta' ? '—'
+                  : r.cob >= 9999 ? '∞ sem'
+                  : r.cob.toFixed(1) + ' sem';
+    const cobCls  = r.cob < 1 && r.status !== 'sin-venta' ? 'num cob-warn' : 'num';
+
+    const pill = r.status === 'urgente' ? '<span class="pill pill-red">Urgente</span>'
+               : r.status === 'pedir'   ? '<span class="pill pill-amber">Pedir</span>'
+               : r.status === 'ok'      ? '<span class="pill pill-green">Ok</span>'
+               : '<span class="pill pill-gray">Sin venta</span>';
+
+    const qtyClass = r.pedEdit > 0 ? 'qty-input has-qty' : 'qty-input';
+    const provShort = r.supplier.split(',')[0].trim();
+
+    tr.innerHTML = `
+      <td class="ref">${escHtml(r.ref)}</td>
+      <td><div class="prov-txt" title="${escHtml(r.supplier)}">${escHtml(provShort)}</div></td>
+      <td>
+        <div class="product-name" title="${escHtml(r.product)}">${escHtml(r.product)}</div>
+        ${r.variant ? `<div class="variant-txt">${escHtml(r.variant)}</div>` : ''}
+      </td>
+      <td class="num">${r.pron.toLocaleString('es-VE')}</td>
+      <td class="num">${r.vta > 0 ? r.vta.toFixed(1) : '—'}</td>
+      <td>${r.status !== 'sin-venta' ? trendHtml : '—'}</td>
+      <td class="${cobCls}">${cobStr}</td>
+      <td class="num" style="color:var(--text-sec)">${r.box}</td>
+      <td class="num">
+        <input class="${qtyClass}" type="number" min="0" step="${r.box}"
+               value="${r.pedEdit}" data-ref="${escHtml(r.ref)}" data-product="${escHtml(r.product)}" data-box="${r.box}">
+      </td>
+      <td>${pill}</td>`;
+    tbody.appendChild(tr);
+  });
+
+  // Eventos en inputs de cantidad
+  tbody.querySelectorAll('.qty-input').forEach(inp => {
+    inp.addEventListener('change', e => {
+      let val = parseInt(e.target.value) || 0;
+      const box = parseInt(e.target.dataset.box) || 1;
+      if (val > 0 && val % box !== 0) {
+        val = Math.ceil(val / box) * box;
+        e.target.value = val;
+      }
+      // Actualizar en allRows
+      const ref = e.target.dataset.ref;
+      const prod = e.target.dataset.product;
+      const row = allRows.find(r => r.ref === ref && r.product === prod);
+      if (row) row.pedEdit = val;
+      e.target.className = val > 0 ? 'qty-input has-qty' : 'qty-input';
+      updateMetrics();
+    });
+  });
+
+  document.getElementById('footer-count').textContent =
+    `Mostrando ${filtered.length} de ${allRows.length} productos elegibles`;
+}
+
+function updateMetrics() {
+  const conOrden = allRows.filter(r => r.pedEdit > 0);
+  document.getElementById('m-prods').textContent   = allRows.length.toLocaleString('es-VE');
+  document.getElementById('m-comprar').textContent  = conOrden.length.toLocaleString('es-VE');
+  document.getElementById('m-units').textContent    = conOrden.reduce((s, r) => s + r.pedEdit, 0).toLocaleString('es-VE');
+  document.getElementById('m-ok').textContent       = allRows.filter(r => r.status === 'ok').length.toLocaleString('es-VE');
+}
+
+// ─── Estado de la tabla ───────────────────────────────────────────────────
+function showLoading() {
+  document.getElementById('state-area').style.display = 'block';
+  document.getElementById('state-area').innerHTML = `
+    <div class="spinner"></div>
+    <h3>Cargando datos del Sheet...</h3>
+    <p>Conectando con Google Apps Script y leyendo el inventario completo.</p>`;
+  document.getElementById('main-table').style.display = 'none';
+}
+
+function showTable() {
+  document.getElementById('state-area').style.display = 'none';
+  document.getElementById('main-table').style.display = 'table';
+}
+
+function showError(msg) {
+  document.getElementById('state-area').style.display = 'block';
+  document.getElementById('state-area').innerHTML = `
+    <div class="icon">⚠️</div>
+    <h3>No se pudieron cargar los datos</h3>
+    <p>${escHtml(msg)}</p>
+    <p style="margin-top:.75rem">Verifica que:<br>
+    1. La URL del script sea correcta<br>
+    2. El script esté publicado con acceso "Cualquier persona"<br>
+    3. Hayas autorizado los permisos en Apps Script</p>`;
+  document.getElementById('main-table').style.display = 'none';
+  document.getElementById('last-update').textContent = 'Error al cargar';
+}
+
+// ─── Exportar CSV para Odoo ───────────────────────────────────────────────
+document.getElementById('btn-csv').addEventListener('click', () => {
+  const toOrder = allRows.filter(r => r.pedEdit > 0);
+  if (!toOrder.length) { alert('No hay productos con cantidad a pedir.'); return; }
+
+  const cols = ['internal_reference', 'product', 'variant', 'supplier', 'qty', 'purchase_units_per_box'];
+  const rows = [cols];
+  toOrder.forEach(r => rows.push([
+    r.ref, r.product, r.variant, r.supplier, r.pedEdit, r.box
+  ]));
+  const csv = rows.map(row =>
+    row.map(c => '"' + String(c ?? '').replace(/"/g, '""') + '"').join(',')
+  ).join('\n');
+
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = `tuntun_compras_${new Date().toISOString().slice(0, 10)}.csv`;
+  a.click();
+});
+
+// ─── Eventos controles ────────────────────────────────────────────────────
+document.getElementById('search').addEventListener('input', renderAll);
+document.getElementById('fil-prov').addEventListener('change', renderAll);
+document.getElementById('fil-status').addEventListener('change', renderAll);
+document.getElementById('fil-sort').addEventListener('change', renderAll);
+
+document.getElementById('btn-info').addEventListener('click', () => document.getElementById('modal').classList.add('open'));
+document.getElementById('modal-close').addEventListener('click', () => document.getElementById('modal').classList.remove('open'));
+document.getElementById('modal').addEventListener('click', e => {
+  if (e.target === document.getElementById('modal')) document.getElementById('modal').classList.remove('open');
+});
+
+// ─── Utilidades ───────────────────────────────────────────────────────────
+function escHtml(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>
