@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -238,7 +237,7 @@
     </div>
     <div class="topbar-btns">
       <button class="btn btn-sm" id="btn-info">ℹ Metodología</button>
-      <button class="btn btn-sm btn-orange" id="btn-reload" disabled>↻ Actualizar Sheet</button>
+      <button class="btn btn-sm btn-orange" id="btn-reload">↻ Actualizar Sheet</button>
     </div>
   </div>
 </div>
@@ -246,7 +245,7 @@
 <div class="app">
 
   <!-- Config banner -->
-  <div class="config-banner" id="config-banner">
+  <div class="config-banner" id="config-banner" style="display:none">
     <h3>📋 Configuración inicial — solo se hace una vez</h3>
     <p>Pega aquí la URL de tu Google Apps Script Web App. Una vez guardada, la herramienta leerá el sheet directamente cada vez que presiones <strong>Actualizar Sheet</strong>.</p>
     <div class="url-input-row">
@@ -384,52 +383,55 @@
 </div>
 
 <script>
-const LS_KEY = 'tuntun_script_url_v2';
-
-function savedUrl() { try { return localStorage.getItem(LS_KEY) || ''; } catch(e) { return ''; } }
-function saveUrl(u) { try { localStorage.setItem(LS_KEY, u); } catch(e) {} }
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzaekOkadX58-grITutkaenxQQEfZIjTUEhZfcQJzjmejojofI1QkfuLM59AELVQzOhVA/exec';
 
 window.addEventListener('DOMContentLoaded', () => {
-  const url = savedUrl();
-  if (url) {
-    document.getElementById('script-url').value = url;
-    document.getElementById('config-banner').style.display = 'none';
-    document.getElementById('btn-reload').disabled = false;
-    loadData(url);
-  }
-});
-
-document.getElementById('btn-save-url').addEventListener('click', () => {
-  const url = document.getElementById('script-url').value.trim();
-  if (!url.startsWith('https://script.google.com/')) {
-    alert('La URL debe comenzar con https://script.google.com/');
-    return;
-  }
-  saveUrl(url);
-  document.getElementById('config-banner').style.display = 'none';
   document.getElementById('btn-reload').disabled = false;
-  loadData(url);
+  loadData(SCRIPT_URL);
 });
 
-document.getElementById('btn-reload').addEventListener('click', () => loadData(savedUrl()));
+document.getElementById('btn-reload').addEventListener('click', () => loadData(SCRIPT_URL));
 
 let allRows = [];
 
-async function loadData(url) {
+function loadData(url) {
   showLoading();
   document.getElementById('btn-reload').disabled = true;
   document.getElementById('last-update').textContent = 'Cargando datos del Sheet...';
-  try {
-    const res = await fetch(url, { redirect: 'follow' });
-    if (!res.ok) throw new Error('HTTP ' + res.status);
-    const json = await res.json();
-    if (!json.ok) throw new Error(json.error || 'Error en el script');
-    processData(json.data);
-  } catch (err) {
-    showError(err.message);
-  } finally {
+
+  // Usamos JSONP para evitar el bloqueo CORS de Google Apps Script
+  const cbName = 'tuntunCb_' + Date.now();
+  const script = document.createElement('script');
+
+  const timeout = setTimeout(() => {
+    cleanup();
+    showError('Tiempo de espera agotado. Verifica que la URL del script sea correcta.');
     document.getElementById('btn-reload').disabled = false;
+  }, 15000);
+
+  function cleanup() {
+    clearTimeout(timeout);
+    delete window[cbName];
+    if (script.parentNode) script.parentNode.removeChild(script);
   }
+
+  window[cbName] = function(json) {
+    cleanup();
+    document.getElementById('btn-reload').disabled = false;
+    if (!json.ok) { showError(json.error || 'Error en el script'); return; }
+    processData(json.data);
+  };
+
+  script.onerror = function() {
+    cleanup();
+    showError('No se pudo conectar con el script. Verifica la URL y que esté publicado como "Cualquier persona".');
+    document.getElementById('btn-reload').disabled = false;
+  };
+
+  // Agrega el callback a la URL
+  const sep = url.includes('?') ? '&' : '?';
+  script.src = url + sep + 'callback=' + cbName;
+  document.head.appendChild(script);
 }
 
 function processData(raw) {
