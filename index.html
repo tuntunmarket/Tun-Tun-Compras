@@ -430,7 +430,7 @@ function loadData(url) {
 
   // Agrega el callback a la URL
   const sep = url.includes('?') ? '&' : '?';
-  script.src = url + sep + 'callback=' + cbName;
+  script.src = url + sep + 'callback=' + cbName + '&t=' + Date.now();
   document.head.appendChild(script);
 }
 
