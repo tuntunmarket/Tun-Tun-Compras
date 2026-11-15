@@ -225,7 +225,7 @@
   .pill-orange { background: var(--orange-lt); color: var(--orange-dk); }
   .pill-outline { background: var(--white); color: var(--text-sec); border: 1px solid var(--border-md); }
   .tag { font-size: 11px; color: var(--text-sec); white-space: nowrap; }
-  .alert-ico { cursor: help; margin-left: 6px; font-size: 13px; }
+  .alert-txt { display: block; margin-top: 4px; font-size: 11px; font-weight: 600; color: var(--amber-txt); white-space: nowrap; cursor: help; }
   .sug { color: var(--text-sec); }
   .metrics { grid-template-columns: repeat(4,1fr); }
   .search-wrap input { padding-left: 34px !important; }
@@ -336,7 +336,7 @@
           <th style="width:52px" class="num" title="Unidades por caja de compra">Caja</th>
           <th style="width:70px" class="num" title="Sugerencia del modelo">Sugerido</th>
           <th style="width:88px" class="num" title="Cantidad a pedir (editable, múltiplo de caja)">A pedir</th>
-          <th style="width:100px">Estado</th>
+          <th style="width:150px">Estado</th>
         </tr>
       </thead>
       <tbody id="tbody"></tbody>
@@ -386,7 +386,10 @@
         <li><strong>Pedir</strong> → requiere orden</li>
         <li><strong>Ok</strong> → la posición cubre el nivel objetivo</li>
         <li><strong>Sin demanda</strong> → sin pedidos en 126 días</li>
-        <li>⚠ <strong>Alerta</strong> → producto nuevo, caja que excede la cobertura, quiebres recurrentes o sin demanda</li>
+        <li>⚠ <strong>Producto nuevo</strong> → menos de 4 campañas de historia; validar la cantidad</li>
+        <li>⚠ <strong>Quiebres recurrentes</strong> → 2 o más campañas atendiendo menos del 80%; revisar cumplimiento del proveedor</li>
+        <li>⚠ <strong>Caja mayor a la cobertura</strong> → la caja mínima supera la cobertura máxima permitida; decidir si se pide</li>
+        <li>⚠ <strong>Evaluar descontinuar</strong> → sin pedidos en 126 días</li>
       </ul>
     </div>
     <div class="modal-section">
@@ -548,7 +551,11 @@ function renderAll() {
                : r.status === 'pedir' ? '<span class="pill pill-amber">Pedir</span>'
                : r.status === 'ok' ? '<span class="pill pill-green">Ok</span>'
                : '<span class="pill pill-gray">Sin demanda</span>';
-    const alerta = r.alerta ? `<span class="alert-ico" title="${esc(r.alerta)}">⚠</span>` : '';
+    const alertaCorta = r.alerta.startsWith('Producto nuevo') ? 'Producto nuevo'
+                      : r.alerta.startsWith('Caja excede') ? 'Caja mayor a la cobertura'
+                      : r.alerta.startsWith('Quiebres') ? 'Quiebres recurrentes'
+                      : r.alerta.startsWith('Sin demanda') ? 'Evaluar descontinuar' : r.alerta;
+    const alerta = r.alerta ? `<span class="alert-txt" title="${esc(r.alerta)}">⚠ ${esc(alertaCorta)}</span>` : '';
     const qCls = r.pedEdit > 0 ? 'qty-input has-qty' : 'qty-input';
     tr.innerHTML = `
       <td><span class="ref">${esc(r.ref)}</span></td>
