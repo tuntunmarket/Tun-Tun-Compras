@@ -247,6 +247,7 @@
     <div class="topbar-btns">
       <button class="btn btn-sm" id="btn-info">ℹ Metodología</button>
       <button class="btn btn-sm" id="btn-recalc" title="Vuelve a calcular el modelo con los datos de este momento (tarda hasta 2 minutos)">⟳ Recalcular modelo</button>
+      <button class="btn btn-sm" id="btn-csv-top">⬇ Exportar CSV Odoo</button>
       <button class="btn btn-sm btn-orange" id="btn-reload">↻ Actualizar</button>
     </div>
   </div>
@@ -394,7 +395,7 @@
     </div>
     <div class="modal-section">
       <h4>Exportación Odoo</h4>
-      <p>CSV con columnas <code>internal_reference, product, variant, supplier, qty, purchase_units_per_box</code>, solo filas con qty &gt; 0, UTF-8 con BOM.</p>
+      <p>Exporta lo que muestra la tabla con los filtros aplicados (por ejemplo, un proveedor o una compradora), solo filas con cantidad a pedir &gt; 0. Columnas: <code>internal_reference, product, variant, supplier, qty, purchase_units_per_box</code>, UTF-8 con BOM, igual que la herramienta actual.</p>
     </div>
     <div class="modal-foot">
       <button class="btn btn-sm btn-orange" id="modal-close">Cerrar</button>
@@ -408,6 +409,7 @@ const SCRIPT_URL_FIJA = '';
 const URL_KEY = 'tt_modelo_v2_url';
 
 let allRows = [];
+let filasVisibles = [];
 
 function getUrl() {
   try { return SCRIPT_URL_FIJA || localStorage.getItem(URL_KEY) || ''; } catch (e) { return SCRIPT_URL_FIJA; }
@@ -536,6 +538,7 @@ function renderAll() {
     : sort === 'producto' ? a.product.localeCompare(b.product,'es')
     : sort === 'proveedor' ? a.supplier.localeCompare(b.supplier,'es') : 0);
 
+  filasVisibles = f;
   updateMetrics();
 
   const tbody = document.getElementById('tbody');
@@ -616,17 +619,24 @@ function showError(msg) {
   document.getElementById('last-update').textContent = 'Error al cargar';
 }
 
-document.getElementById('btn-csv').addEventListener('click', () => {
-  const to = allRows.filter(r => r.pedEdit > 0);
-  if (!to.length) { alert('No hay productos con cantidad a pedir.'); return; }
+function exportarCSV() {
+  const to = filasVisibles.filter(r => r.pedEdit > 0);
+  if (!to.length) { alert('No hay productos con cantidad a pedir en la vista actual.'); return; }
+  const prov = document.getElementById('fil-prov').value;
+  const provs = new Set(to.map(r => r.supplier)).size;
+  const uds = to.reduce((s, r) => s + r.pedEdit, 0);
+  if (!confirm(`Se exportarán ${to.length.toLocaleString('es-VE')} productos de ${provs} proveedor(es), ${uds.toLocaleString('es-VE')} unidades.\n\nSe exporta lo que muestra la tabla con los filtros actuales. ¿Continuar?`)) return;
   const cols = ['internal_reference','product','variant','supplier','qty','purchase_units_per_box'];
   const rows = [cols, ...to.map(r => [r.ref, r.product, r.variant, r.supplier, r.pedEdit, r.box])];
   const csv = rows.map(row => row.map(c => '"' + String(c ?? '').replace(/"/g,'""') + '"').join(',')).join('\n');
+  const sufijo = prov ? '_' + prov.split(',')[0].trim().replace(/[^A-Za-z0-9]+/g, '-') : '';
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob(['\uFEFF' + csv], {type:'text/csv;charset=utf-8'}));
-  a.download = `tuntun_compras_modelo_${new Date().toISOString().slice(0,10)}.csv`;
+  a.download = `tuntun_compras_modelo_${new Date().toISOString().slice(0,10)}${sufijo}.csv`;
   a.click();
-});
+}
+document.getElementById('btn-csv').addEventListener('click', exportarCSV);
+document.getElementById('btn-csv-top').addEventListener('click', exportarCSV);
 
 ['search'].forEach(id => document.getElementById(id).addEventListener('input', renderAll));
 ['fil-prov','fil-comp','fil-esq','fil-status','fil-sort'].forEach(id => document.getElementById(id).addEventListener('change', renderAll));
