@@ -225,10 +225,13 @@
   .pill-orange { background: var(--orange-lt); color: var(--orange-dk); }
   .pill-outline { background: var(--white); color: var(--text-sec); border: 1px solid var(--border-md); }
   .tag { font-size: 11px; color: var(--text-sec); white-space: nowrap; }
-  .alert-txt { display: block; margin-top: 4px; font-size: 11px; font-weight: 600; color: var(--amber-txt); white-space: nowrap; cursor: help; }
+  .alert-txt { display: block; margin-top: 4px; font-size: 11px; font-weight: 600; color: var(--amber-txt); white-space: normal; line-height: 1.3; cursor: help; }
   .sug { color: var(--text-sec); }
   .metrics { grid-template-columns: repeat(4,1fr); }
   .search-wrap input { padding-left: 34px !important; }
+  #main-table td { padding: 9px 10px; }
+  #main-table thead th { padding: 11px 10px; }
+  #main-table .product-name { max-width: 210px; }
   .btn-row-note { font-size: 11px; color: var(--text-sec); }
 </style>
 </head>
@@ -337,7 +340,7 @@
           <th style="width:52px" class="num" title="Unidades por caja de compra">Caja</th>
           <th style="width:70px" class="num" title="Sugerencia del modelo">Sugerido</th>
           <th style="width:88px" class="num" title="Cantidad a pedir (editable, múltiplo de caja)">A pedir</th>
-          <th style="width:150px">Estado</th>
+          <th style="width:130px">Estado</th>
         </tr>
       </thead>
       <tbody id="tbody"></tbody>
