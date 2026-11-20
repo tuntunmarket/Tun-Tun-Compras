@@ -227,7 +227,7 @@
   .tag { font-size: 11px; color: var(--text-sec); white-space: nowrap; }
   .alert-txt { display: block; margin-top: 4px; font-size: 11px; font-weight: 600; color: var(--amber-txt); white-space: normal; line-height: 1.3; cursor: help; }
   .sug { color: var(--text-sec); }
-  .metrics { grid-template-columns: repeat(4,1fr); }
+  .metrics { grid-template-columns: repeat(5,1fr); }
   .search-wrap input { padding-left: 34px !important; }
   #main-table td { padding: 9px 10px; }
   #main-table thead th { padding: 11px 10px; }
@@ -275,6 +275,7 @@
     <div class="metric"><div class="metric-label">Productos evaluados</div><div class="metric-val" id="m-prods">—</div><div class="metric-sub" id="m-prods-sub">consignación · venta simple</div></div>
     <div class="metric"><div class="metric-label">Requieren orden</div><div class="metric-val" id="m-comprar">—</div><div class="metric-sub" id="m-urg">esta semana</div></div>
     <div class="metric"><div class="metric-label">Unidades a pedir</div><div class="metric-val" id="m-units">—</div><div class="metric-sub">ajustado a cajas</div></div>
+    <div class="metric"><div class="metric-label">Agotados hoy</div><div class="metric-val" id="m-agot">—</div><div class="metric-sub" id="m-agot-sub">sin inventario para vender</div></div>
     <div class="metric"><div class="metric-label">Con alerta</div><div class="metric-val" id="m-alert">—</div><div class="metric-sub">revisar antes de pedir</div></div>
   </div>
 
@@ -307,6 +308,7 @@
         <option value="pedir">Pedir</option>
         <option value="ok">Ok</option>
         <option value="sin-demanda">Sin demanda</option>
+        <option value="agotado">Agotados</option>
         <option value="alerta">Con alerta</option>
       </select>
     </div>
@@ -315,6 +317,7 @@
       <select id="fil-sort">
         <option value="compra-desc">Mayor compra</option>
         <option value="cobertura-asc">Menor cobertura</option>
+        <option value="agotado-desc">Más días agotado</option>
         <option value="producto">Producto A-Z</option>
         <option value="proveedor">Proveedor A-Z</option>
       </select>
@@ -358,10 +361,10 @@
 
 <div class="modal-bg" id="modal">
   <div class="modal">
-    <h3>Metodología del modelo v1.1</h3>
+    <h3>Metodología del modelo v1.3</h3>
     <div class="modal-section">
       <h4>Demanda</h4>
-      <p>Se mide por fecha de creación del carrito, en ventanas de 21 días (una campaña), con las últimas 6 ventanas. Incluye carritos abiertos descontando la tasa histórica de cancelación real (sin unificaciones). Las ventanas con menos de 80% atendido se excluyen por quiebre.</p>
+      <p>Se mide por fecha de creación del carrito, en ventanas de 21 días (una campaña), con las últimas 6 ventanas. Incluye carritos abiertos descontando la tasa histórica de cancelación real (sin unificaciones). Los días en que el producto estuvo agotado no cuentan como demanda cero: desde el 9-nov-2026 se toman de la foto diaria de inventario (pronosticado ≤ 0 todo el día); antes, de las rachas sin carritos más largas de lo normal para ese producto: la demanda se calcula con los días disponibles. Las ventanas con menos de 80% atendido o menos de 7 días disponibles se excluyen.</p>
     </div>
     <div class="modal-section">
       <h4>Pronóstico según patrón</h4>
@@ -391,6 +394,7 @@
         <li><strong>Ok</strong> → la posición cubre el nivel objetivo</li>
         <li><strong>Sin demanda</strong> → sin pedidos en 126 días</li>
         <li>⚠ <strong>Producto nuevo</strong> → menos de 4 campañas de historia; validar la cantidad</li>
+        <li>⚠ <strong>Agotado hace N días</strong> → pronosticado ≤ 0 en la última foto de inventario; “+” indica que ya estaba agotado cuando empezó el registro (9-nov-2026)</li>
         <li>⚠ <strong>Quiebres recurrentes</strong> → 2 o más campañas atendiendo menos del 80%; revisar cumplimiento del proveedor</li>
         <li>⚠ <strong>Caja mayor a la cobertura</strong> → la caja mínima supera la cobertura máxima permitida; decidir si se pide</li>
         <li>⚠ <strong>Evaluar descontinuar</strong> → sin pedidos en 126 días</li>
@@ -493,7 +497,9 @@ function processData(json) {
       ref: String(r.referencia || ''), product: r.producto || '', variant: r.variant || '',
       patron: r.patron || '', abc: r.abc || '', pron: num(r.pronosticado),
       demSem: demD * 7, cobD, lt, box, sug, pedEdit: sug, alerta: r.alerta || '', status,
-      fecha: r.fecha_calculo || ''
+      fecha: r.fecha_calculo || '',
+      agotado: r.agotado === true || r.agotado === 'TRUE' || r.agotado === 'true',
+      diasAgot: num(r.dias_agotado), agotAntes: r.agotado_antes_registro === true || r.agotado_antes_registro === 'TRUE' || r.agotado_antes_registro === 'true'
     };
   });
 
@@ -532,12 +538,14 @@ function renderAll() {
     if (comp && r.compradora !== comp) return false;
     if (esq && r.esquema !== esq) return false;
     if (st === 'alerta') { if (!r.alerta) return false; }
+    else if (st === 'agotado') { if (!r.agotado) return false; }
     else if (st && r.status !== st) return false;
     return true;
   });
 
   f.sort((a,b) => sort === 'compra-desc' ? b.pedEdit - a.pedEdit
     : sort === 'cobertura-asc' ? a.cobD - b.cobD
+    : sort === 'agotado-desc' ? b.diasAgot - a.diasAgot
     : sort === 'producto' ? a.product.localeCompare(b.product,'es')
     : sort === 'proveedor' ? a.supplier.localeCompare(b.supplier,'es') : 0);
 
@@ -559,6 +567,7 @@ function renderAll() {
                : '<span class="pill pill-gray">Sin demanda</span>';
     const alertaCorta = r.alerta.startsWith('Producto nuevo') ? 'Producto nuevo'
                       : r.alerta.startsWith('Caja excede') ? 'Caja mayor a la cobertura'
+                      : r.alerta.startsWith('Agotado') ? `Agotado hace ${r.diasAgot}${r.agotAntes ? '+' : ''} días`
                       : r.alerta.startsWith('Quiebres') ? 'Quiebres recurrentes'
                       : r.alerta.startsWith('Sin demanda') ? 'Evaluar descontinuar' : r.alerta;
     const alerta = r.alerta ? `<span class="alert-txt" title="${esc(r.alerta)}">⚠ ${esc(alertaCorta)}</span>` : '';
@@ -602,6 +611,9 @@ function updateMetrics() {
   document.getElementById('m-urg').textContent = `${allRows.filter(r => r.status === 'urgente').length.toLocaleString('es-VE')} urgentes`;
   document.getElementById('m-units').textContent = c.reduce((s,r) => s + r.pedEdit, 0).toLocaleString('es-VE');
   document.getElementById('m-alert').textContent = allRows.filter(r => r.alerta).length.toLocaleString('es-VE');
+  const ag = allRows.filter(r => r.agotado);
+  document.getElementById('m-agot').textContent = ag.length.toLocaleString('es-VE');
+  document.getElementById('m-agot-sub').textContent = `${ag.filter(r => r.pedEdit > 0).length.toLocaleString('es-VE')} con orden sugerida`;
 }
 
 function showLoading(recalcular) {
