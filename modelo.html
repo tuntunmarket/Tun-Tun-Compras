@@ -268,7 +268,7 @@
   </div>
 
   <div class="notice">
-    🔍 Productos con <strong>&nbsp;supplier_available = TRUE&nbsp;</strong> y <strong>&nbsp;is_published = TRUE</strong>. El modelo se recalcula solo cada lunes a las 5:00 a. m.; usa <strong>&nbsp;Recalcular modelo&nbsp;</strong> si necesitas los datos de este momento.
+    🔍 Productos con <strong>&nbsp;supplier_available = TRUE</strong> (disponibles en el proveedor), publicados o no: la tienda despublica sola los agotados. El modelo se recalcula solo cada lunes a las 5:00 a. m.; usa <strong>&nbsp;Recalcular modelo&nbsp;</strong> si necesitas los datos de este momento.
   </div>
 
   <div class="metrics">
@@ -372,6 +372,7 @@
         <li><strong>Estable / Errático</strong> → promedio ponderado exponencial (más peso a lo reciente)</li>
         <li><strong>Intermitente / Irregular</strong> → promedio sin quiebres, ajustado a la baja</li>
         <li><strong>Nuevo</strong> (&lt; 4 campañas) → tasa diaria desde su primer pedido</li>
+        <li><strong>Reactivar</strong> → agotado y sin pedidos en 126 días (la tienda lo despublicó): se usa la demanda de su último período de venta, hasta 12 meses atrás</li>
         <li><strong>Sin demanda</strong> → no se repone</li>
       </ul>
     </div>
@@ -481,7 +482,9 @@ function num(v) { const n = Number(v); return isFinite(n) ? n : 0; }
 
 function processData(json) {
   const raw = json.data || [];
-  const eligible = raw.filter(r => r.is_published === true || r.is_published === 'TRUE' || r.is_published === 'true');
+  // Solo se excluyen productos no disponibles en el proveedor (ya filtrados en BigQuery).
+  // No se filtra por publicado: la tienda despublica sola los productos agotados.
+  const eligible = raw;
   allRows = eligible.map(r => {
     const demD = num(r.dem_diaria);
     const pos  = num(r.posicion);
@@ -558,7 +561,7 @@ function renderAll() {
   f.forEach(r => {
     const tr = document.createElement('tr');
     const esqPill = r.esquema === 'CONSIGNACION' ? '<span class="pill pill-orange">Consignación</span>' : '<span class="pill pill-outline">Venta simple</span>';
-    const patTxt = {ESTABLE:'Estable',ERRATICO:'Errático',INTERMITENTE:'Intermitente',IRREGULAR:'Irregular',NUEVO:'Nuevo',SIN_DEMANDA:'Sin demanda'}[r.patron] || r.patron;
+    const patTxt = {ESTABLE:'Estable',ERRATICO:'Errático',INTERMITENTE:'Intermitente',IRREGULAR:'Irregular',NUEVO:'Nuevo',SIN_DEMANDA:'Sin demanda',SIN_DATOS:'Sin datos',REACTIVAR:'Reactivar'}[r.patron] || r.patron;
     const cobStr = r.status === 'sin-demanda' ? '—' : r.cobD >= 9999 ? '∞' : Math.max(0, r.cobD).toFixed(0) + ' d';
     const cobCls = (r.status === 'urgente') ? 'num cob-warn' : 'num';
     const pill = r.status === 'urgente' ? '<span class="pill pill-red">Urgente</span>'
