@@ -402,7 +402,7 @@
     </div>
     <div class="modal-section">
       <h4>Exportación Odoo</h4>
-      <p>Exporta lo que muestra la tabla con los filtros aplicados (por ejemplo, un proveedor o una compradora), solo filas con cantidad a pedir &gt; 0. Columnas: <code>internal_reference, product, variant, supplier, qty, purchase_units_per_box</code>, UTF-8 con BOM, igual que la herramienta actual.</p>
+      <p>Exporta lo que muestra la tabla con los filtros aplicados (por ejemplo, un proveedor o una compradora), solo filas con cantidad a pedir &gt; 0, en el formato de la plantilla OC masivo: Moneda, Unidad de Negocio, Proveedor, <code>Líneas del pedido/Producto/Referencia</code>, <code>Líneas del pedido/Cantidad</code> en <strong>bultos</strong> (UdM de compra) y <code>Líneas del pedido/Impuestos/ID</code> = l10n_ve_base.tax16purchase.</p>
     </div>
     <div class="modal-foot">
       <button class="btn btn-sm btn-orange" id="modal-close">Cerrar</button>
@@ -635,19 +635,29 @@ function showError(msg) {
 }
 
 function exportarCSV() {
-  const to = filasVisibles.filter(r => r.pedEdit > 0);
+  const to = filasVisibles.filter(r => r.pedEdit > 0)
+    .slice().sort((a, b) => a.supplier.localeCompare(b.supplier, 'es') || a.product.localeCompare(b.product, 'es'));
   if (!to.length) { alert('No hay productos con cantidad a pedir en la vista actual.'); return; }
   const prov = document.getElementById('fil-prov').value;
   const provs = new Set(to.map(r => r.supplier)).size;
-  const uds = to.reduce((s, r) => s + r.pedEdit, 0);
-  if (!confirm(`Se exportarán ${to.length.toLocaleString('es-VE')} productos de ${provs} proveedor(es), ${uds.toLocaleString('es-VE')} unidades.\n\nSe exporta lo que muestra la tabla con los filtros actuales. ¿Continuar?`)) return;
-  const cols = ['internal_reference','product','variant','supplier','qty','purchase_units_per_box'];
-  const rows = [cols, ...to.map(r => [r.ref, r.product, r.variant, r.supplier, r.pedEdit, r.box])];
+  const bultos = to.reduce((s, r) => s + Math.round(r.pedEdit / r.box), 0);
+  if (!confirm(`Se exportarán ${to.length.toLocaleString('es-VE')} productos de ${provs} proveedor(es), ${bultos.toLocaleString('es-VE')} bultos.\n\nSe exporta lo que muestra la tabla con los filtros actuales, en el formato de la plantilla OC masivo de Odoo. ¿Continuar?`)) return;
+  // Mismo formato que la pestaña "PROYECCIÓN MODELO" / "OC MASIVO" (cantidad en bultos = UdM de compra)
+  const cols = ['', 'Moneda', 'Unidad de Negocio', 'Proveedor', 'Líneas del pedido/Producto/Referencia', 'Líneas del pedido/Cantidad', 'Líneas del pedido/Impuestos/ID'];
+  const rows = [cols, ...to.map((r, i) => [
+    i === 0 ? 'Productos Aldaba C.A' : '',
+    i === 0 ? 'USD' : '',
+    i === 0 ? 'Venta Directa' : '',
+    r.supplier,
+    r.ref,
+    Math.round(r.pedEdit / r.box),
+    'l10n_ve_base.tax16purchase'
+  ])];
   const csv = rows.map(row => row.map(c => '"' + String(c ?? '').replace(/"/g,'""') + '"').join(',')).join('\n');
   const sufijo = prov ? '_' + prov.split(',')[0].trim().replace(/[^A-Za-z0-9]+/g, '-') : '';
   const a = document.createElement('a');
   a.href = URL.createObjectURL(new Blob(['\uFEFF' + csv], {type:'text/csv;charset=utf-8'}));
-  a.download = `tuntun_compras_modelo_${new Date().toISOString().slice(0,10)}${sufijo}.csv`;
+  a.download = `OC_masivo_modelo_${new Date().toISOString().slice(0,10)}${sufijo}.csv`;
   a.click();
 }
 document.getElementById('btn-csv').addEventListener('click', exportarCSV);
