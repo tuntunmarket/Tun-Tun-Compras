@@ -403,7 +403,7 @@
     </div>
     <div class="modal-section">
       <h4>Exportación Odoo</h4>
-      <p>Exporta lo que muestra la tabla con los filtros aplicados (por ejemplo, un proveedor o una compradora), solo filas con cantidad a pedir &gt; 0, en el formato de la plantilla OC masivo: Moneda, Unidad de Negocio, Proveedor, <code>Líneas del pedido/Producto/Referencia</code>, <code>Líneas del pedido/Cantidad</code> en <strong>bultos</strong> (UdM de compra) y <code>Líneas del pedido/Impuestos/ID</code> = l10n_ve_base.tax16purchase.</p>
+      <p>Exporta lo que muestra la tabla con los filtros aplicados (por ejemplo, un proveedor o una compradora), solo filas con cantidad a pedir &gt; 0, en el formato de la plantilla OC masivo: una orden por proveedor (Moneda, Unidad de Negocio y Proveedor solo en la primera línea de cada proveedor), <code>Líneas del pedido/Producto/Referencia</code>, <code>Líneas del pedido/Cantidad</code> en <strong>bultos</strong> (UdM de compra) y <code>Líneas del pedido/Impuestos/ID</code> = l10n_ve_base.tax16purchase.</p>
     </div>
     <div class="modal-foot">
       <button class="btn btn-sm btn-orange" id="modal-close">Cerrar</button>
@@ -647,15 +647,19 @@ function exportarCSV() {
   if (!confirm(`Se exportarán ${to.length.toLocaleString('es-VE')} productos de ${provs} proveedor(es), ${bultos.toLocaleString('es-VE')} bultos.\n\nSe exporta lo que muestra la tabla con los filtros actuales, en el formato de la plantilla OC masivo de Odoo. ¿Continuar?`)) return;
   // Mismo formato que la pestaña "PROYECCIÓN MODELO" / "OC MASIVO" (cantidad en bultos = UdM de compra)
   const cols = ['', 'Moneda', 'Unidad de Negocio', 'Proveedor', 'Líneas del pedido/Producto/Referencia', 'Líneas del pedido/Cantidad', 'Líneas del pedido/Impuestos/ID'];
-  const rows = [cols, ...to.map((r, i) => [
-    i === 0 ? 'Productos Aldaba C.A' : '',
-    i === 0 ? 'USD' : '',
-    i === 0 ? 'Venta Directa' : '',
-    r.supplier,
+  // Una orden por proveedor: los datos de la orden van solo en la primera línea de cada proveedor;
+  // las líneas siguientes llevan vacías esas columnas para que Odoo las agregue a la misma orden.
+  const rows = [cols, ...to.map((r, i) => {
+    const nueva = i === 0 || to[i - 1].supplier !== r.supplier;
+    return [
+    nueva ? 'Productos Aldaba C.A' : '',
+    nueva ? 'USD' : '',
+    nueva ? 'Venta Directa' : '',
+    nueva ? r.supplier : '',
     r.ref,
     Math.round(r.pedEdit / r.box),
     'l10n_ve_base.tax16purchase'
-  ])];
+  ];})];
   const csv = rows.map(row => row.map(c => '"' + String(c ?? '').replace(/"/g,'""') + '"').join(',')).join('\n');
   const sufijo = prov ? '_' + prov.split(',')[0].trim().replace(/[^A-Za-z0-9]+/g, '-') : '';
   const a = document.createElement('a');
