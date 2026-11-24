@@ -267,9 +267,7 @@
     </div>
   </div>
 
-  <div class="notice">
-    🔍 Productos con <strong>&nbsp;supplier_available = TRUE</strong> (disponibles en el proveedor), publicados o no: la tienda despublica sola los agotados. El modelo se recalcula solo cada lunes a las 5:00 a. m.; usa <strong>&nbsp;Recalcular modelo&nbsp;</strong> si necesitas los datos de este momento.
-  </div>
+  <div class="notice"><span>🔍 Productos con <strong>&nbsp;supplier_available = TRUE</strong> (disponibles en el proveedor), publicados o no: la tienda despublica sola los agotados. El modelo se recalcula solo cada lunes a las 5:00 a. m.; usa <strong>&nbsp;Recalcular modelo&nbsp;</strong> si necesitas los datos de este momento.</span></div>
 
   <div class="metrics">
     <div class="metric"><div class="metric-label">Productos evaluados</div><div class="metric-val" id="m-prods">—</div><div class="metric-sub" id="m-prods-sub">consignación · venta simple</div></div>
@@ -510,8 +508,19 @@ function processData(json) {
   fillSelect('fil-comp', [...new Set(allRows.map(r => r.compradora))].sort((a,b)=>a.localeCompare(b,'es')), 'Todas');
 
   const fecha = allRows.length ? allRows[0].fecha : '—';
-  document.getElementById('last-update').textContent =
-    `Cálculo del modelo: ${fecha} · actualizado ${json.actualizado || '—'} · ${eligible.length} de ${raw.length} productos`;
+  const invs = raw.map(r => r.inventario_al).filter(Boolean).sort();
+  const inv = invs.length ? invs[invs.length - 1] : null;
+  let invTxt = 'inventario: sin dato';
+  let viejo = true;
+  if (inv) {
+    const horas = (Date.now() - new Date(inv.replace(' ', 'T') + ':00-04:00').getTime()) / 3600000;
+    viejo = horas > 24;
+    invTxt = `inventario al ${inv}`;
+  }
+  const lu = document.getElementById('last-update');
+  lu.innerHTML = `Cálculo del modelo: ${esc(fecha)} · actualizado ${esc(json.actualizado || '—')} · `
+    + `<span style="${viejo ? 'color:var(--red-txt);font-weight:700' : ''}">${esc(invTxt)}${viejo ? ' ⚠ más de 24 h: presiona Recalcular modelo' : ''}</span>`
+    + ` · ${eligible.length} productos`;
   const nC = allRows.filter(r => r.esquema === 'CONSIGNACION').length;
   document.getElementById('m-prods-sub').textContent = `${nC.toLocaleString('es-VE')} consignación · ${(allRows.length - nC).toLocaleString('es-VE')} venta simple`;
 
