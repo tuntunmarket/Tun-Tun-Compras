@@ -250,7 +250,7 @@
     <div class="topbar-btns">
       <button class="btn btn-sm" id="btn-info">ℹ Metodología</button>
       <button class="btn btn-sm" id="btn-recalc" title="Vuelve a calcular el modelo con los datos de este momento (tarda hasta 2 minutos)">⟳ Recalcular modelo</button>
-      <button class="btn btn-sm" id="btn-csv-top">⬇ Exportar CSV Odoo</button>
+      <button class="btn btn-sm" id="btn-csv-top">⬇ Exportar Excel Odoo</button>
       <button class="btn btn-sm btn-orange" id="btn-reload">↻ Actualizar</button>
     </div>
   </div>
@@ -353,7 +353,7 @@
   <div class="footer">
     <div class="footer-info" id="footer-count"></div>
     <div class="footer-btns">
-      <button class="btn btn-sm" id="btn-csv">⬇ Exportar CSV Odoo</button>
+      <button class="btn btn-sm" id="btn-csv">⬇ Exportar Excel Odoo</button>
     </div>
   </div>
 
@@ -659,12 +659,31 @@ function exportarCSV() {
       'l10n_ve_base.tax16purchase'
     ];
   })];
-  const csv = rows.map(row => row.map(c => '"' + String(c ?? '').replace(/"/g,'""') + '"').join(',')).join('\n');
+  // Archivo .xlsx idéntico al "OC PROVEEDORES MASIVO" de compras: hoja "Hoja1", referencias y cantidades numéricas.
+  const aoa = rows.map((row, ri) => row.map((c, ci) => {
+    if (ri > 0 && (ci === 3 || ci === 4) && /^\d+$/.test(String(c))) return Number(c);
+    return c === '' ? null : c;
+  }));
+  const fecha = new Date().toISOString().slice(0,10);
   const sufijo = prov ? '_' + prov.split(',')[0].trim().replace(/[^A-Za-z0-9]+/g, '-') : '';
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob(['\uFEFF' + csv], {type:'text/csv;charset=utf-8'}));
-  a.download = `OC_masivo_modelo_${new Date().toISOString().slice(0,10)}${sufijo}.csv`;
-  a.click();
+  cargarXLSX().then(XLSX => {
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Hoja1');
+    XLSX.writeFile(wb, `OC_PROVEEDORES_MASIVO_${fecha}${sufijo}.xlsx`);
+  }).catch(() => alert('No se pudo generar el Excel. Revisa la conexión a internet e intenta de nuevo.'));
+}
+
+let _xlsxPromesa = null;
+function cargarXLSX() {
+  if (window.XLSX) return Promise.resolve(window.XLSX);
+  if (!_xlsxPromesa) _xlsxPromesa = new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+    s.onload = () => res(window.XLSX); s.onerror = rej;
+    document.head.appendChild(s);
+  });
+  return _xlsxPromesa;
 }
 document.getElementById('btn-csv').addEventListener('click', exportarCSV);
 document.getElementById('btn-csv-top').addEventListener('click', exportarCSV);
